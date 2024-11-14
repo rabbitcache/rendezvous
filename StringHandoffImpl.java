@@ -14,16 +14,33 @@ public class StringHandoffImpl implements StringHandoff {
     @Override
     public synchronized void pass(String msg, long msTimeout)
         throws InterruptedException, TimedOutException, ShutdownException, IllegalStateException {
-        if (msTimeout != 0L) throw new RuntimeException("non-zero timeout is not yet supported");
-        // Receiver first: drop off msg, notify all
-        if(bin.equals(" ")){
-            bin = msg;
-            notifyAll();
+        long msEndTime = System.currentTimeMillis() + msTimeout;
+        if (msTimeout == 0L) {
+            // Receiver first: drop off message, notify all
+            if(bin.equals(" ")){
+                bin = msg;
+                notifyAll();
+            }
+            // Passer First: drop off message and wait until receiver arrives
+            else {
+                bin = msg;
+                wait();
+            }
         }
-        // Passer First: drop off msg and wait until receiver arrives
         else {
-            bin = msg;
-            wait();
+            long msRemaining = msEndTime - System.currentTimeMillis();
+            //if (msRemaining < 1L) throw TimedOutException;
+            wait(msRemaining);
+            // Receiver first: drop off message, notify all
+            if(bin.equals(" ")){
+                bin = msg;
+                notifyAll();
+            }
+            // Passer First: drop off message and wait until receiver arrives
+            else {
+                bin = msg;
+                wait();
+            }
         }
     }
 
@@ -53,7 +70,7 @@ public class StringHandoffImpl implements StringHandoff {
         }
         else {
             long msRemaining = msEndTime - System.currentTimeMillis();
-            if (msRemaining < 1L) return "unsucessful";
+            //if (msRemaining < 1L) return "unsucessful";
             wait(msRemaining);
             // Passer first: just go and pick up message
             if (! bin.equals(" ") ) {
