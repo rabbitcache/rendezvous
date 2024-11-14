@@ -35,20 +35,40 @@ public class StringHandoffImpl implements StringHandoff {
     @Override
     public synchronized String receive(long msTimeout)
         throws InterruptedException, TimedOutException, ShutdownException, IllegalStateException {
+        long msEndTime = System.currentTimeMillis() + msTimeout;
         String msg = null;
-        if (msTimeout != 0L) throw new RuntimeException("non-zero timeout is not yet supported");
-        // Passer first: just go and pick up msg
-        if (! bin.equals(" ") ) {
-            msg = bin;
-            return msg;
+        if (msTimeout == 0L) {
+            // Passer first: just go and pick up message
+            if (! bin.equals(" ") ) {
+                msg = bin;
+                return msg;
+            }
+            // Receiver first: wait until passer arrives
+            else {
+                notifyAll();
+                while (bin.equals(" ")) wait();
+                msg = bin;
+                return msg;
+            }
         }
-        // Receiver first: wait until passer arrives
         else {
-            notifyAll();
-            while (bin.equals(" ")) wait();
-            msg = bin;
-            return msg;
+            long msRemaining = msEndTime - System.currentTimeMillis();
+            if (msRemaining < 1L) return "unsucessful";
+            wait(msRemaining);
+            // Passer first: just go and pick up message
+            if (! bin.equals(" ") ) {
+                msg = bin;
+                return msg;
+            }
+            // Receiver first: wait until passer arrives
+            else {
+                notifyAll();
+                while (bin.equals(" ")) wait();
+                msg = bin;
+                return msg;
+            }
         }
+
     }
 
     @Override
@@ -58,6 +78,7 @@ public class StringHandoffImpl implements StringHandoff {
 
     @Override
     public synchronized void shutdown() {
+
     }
 
     @Override
