@@ -28,6 +28,7 @@ public class StringHandoffImpl implements StringHandoff {
             notifyAll();
             wait();
         }
+        bin = null;
     }
 
     @Override
@@ -41,38 +42,19 @@ public class StringHandoffImpl implements StringHandoff {
         long msEndTime = System.currentTimeMillis() + msTimeout;
         String msg = null;
         if (msTimeout == 0L) {
-            // Passer first: just go and pick up message
-            if (bin != null) {
-                msg = bin;
-                notifyAll();
-                return msg;
-            }
-            // Receiver first: wait until passer arrives
-            else {
                 notifyAll();
                 while (bin == null) wait();
                 msg = bin;
-                return msg;
-            }
+                notifyAll();
         }
         else {
             long msRemaining = msEndTime - System.currentTimeMillis();
             //if (msRemaining < 1L) return "unsucessful";
             wait(msRemaining);
-            // Passer first: just go and pick up message
-            if (bin != null) {
-                msg = bin;
-                notifyAll();
-                return msg;
-            }
-            // Receiver first: wait until passer arrives
-            else {
-                notifyAll();
-                while (bin == null) wait();
-                msg = bin;
-                return msg;
-            }
+            msg = bin;
+            notifyAll();
         }
+        return msg;
 
     }
 
